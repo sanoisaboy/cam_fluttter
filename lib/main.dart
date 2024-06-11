@@ -4,6 +4,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' show join;
 import 'dart:io';
 import 'package:gallery_saver/gallery_saver.dart';
+import 'dart:async';
 
 class CameraStreamPage extends StatefulWidget {
   @override
@@ -14,6 +15,8 @@ class _CameraStreamPageState extends State<CameraStreamPage> {
   CameraController? _controller;
   List<CameraDescription>? cameras;
   bool isRecording = false;
+  Timer? _timer;
+  int _recordDuration = 0;
 
   @override
   void initState() {
@@ -49,6 +52,7 @@ class _CameraStreamPageState extends State<CameraStreamPage> {
       await _controller!.startVideoRecording();
       setState(() {
         isRecording = true;
+        _startTimer();
       });
     } catch (e) {
       print('Error starting video recording:$e');
@@ -65,6 +69,7 @@ class _CameraStreamPageState extends State<CameraStreamPage> {
       final file = await _controller!.stopVideoRecording();
       setState(() {
         isRecording = false;
+        _stopTimer();
       });
       final directory = await getExternalStorageDirectory();
       final filePath =
@@ -78,6 +83,26 @@ class _CameraStreamPageState extends State<CameraStreamPage> {
     } catch (e) {
       print('Error stopping video recording : $e');
     }
+  }
+
+  void _startTimer() {
+    _recordDuration = 0;
+    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+      setState(() {
+        _recordDuration++;
+      });
+    });
+  }
+
+  void _stopTimer() {
+    _timer?.cancel();
+    _timer = null;
+  }
+
+  String _formatDuration(int seconds) {
+    final minutes = seconds ~/ 60;
+    final remainingSeconds = seconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -104,6 +129,17 @@ class _CameraStreamPageState extends State<CameraStreamPage> {
               child: Text(isRecording ? 'Stop' : 'Record'),
             ),
           ),
+          if (isRecording)
+            Positioned(
+              top: 20,
+              left: 20,
+              child: Container(
+                padding: EdgeInsets.all(8),
+                color: Colors.black54,
+                child: Text(_formatDuration(_recordDuration),
+                    style: TextStyle(color: Colors.white, fontSize: 20)),
+              ),
+            )
         ],
       ),
 
